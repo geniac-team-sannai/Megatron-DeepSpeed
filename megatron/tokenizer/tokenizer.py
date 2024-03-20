@@ -39,8 +39,9 @@ def build_tokenizer(args):
         assert args.vocab_size is not None
         tokenizer = _NullTokenizer(args.vocab_size)
     elif args.tokenizer_type == 'HFTokenizer':
-        assert args.tokenizer_model is not None
-        tokenizer = _HFTokenizer(args.tokenizer_model,args.seq_length)
+        assert args.tokenizer_model is not None        
+        # tokenizer = _HFTokenizer(args.tokenizer_model,args.seq_length)
+        tokenizer = _HFTokenizer(args.tokenizer_model, 1024)
     else:
         raise NotImplementedError('{} tokenizer is not '
                                   'implemented.'.format(args.tokenizer_type))
@@ -543,7 +544,7 @@ class _HFTokenizer(AbstractTokenizer):
     def __init__(self, tokenizer_name_or_path,max_seq_len):
         name = tokenizer_name_or_path
         super().__init__(name)
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path,padding_side="right",use_fast=False)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path,padding_side="right",use_fast=False, trust_remote_code=True)
         
         DEFAULT_PAD_TOKEN = "[PAD]"
         DEFAULT_EOS_TOKEN = "</s>"
