@@ -1521,3 +1521,8 @@ def _add_distillation_args(parser):
                        help='Directory containing a teacher model checkpoint.')
 
     return parser
+
+def _add_distillation_args(parser):
+    group = parser.add_argument_group('User defined')
+    group.add_argument('--freeze_attn', action='store_true',help='freeze attention layer weight')
+    group.add_argument('--freeze_head', action='store_true',help='freeze MLHead layer weight')

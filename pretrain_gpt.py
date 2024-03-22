@@ -13,6 +13,7 @@ from megatron.core import mpu, tensor_parallel
 from megatron.core.enums import ModelType
 from megatron.data.gpt_dataset import build_train_valid_test_datasets
 from megatron.model import GPTModel, GPTModelPipe
+from megatron.model.transformer import ParallelAttention, LMHeadPipe
 from megatron.training import pretrain
 from megatron.utils import get_ltor_masks_and_position_ids
 from megatron.utils import average_losses_across_data_parallel_group, update_rotary_pos_emb
@@ -27,6 +28,33 @@ import subprocess
 from torch import nn
 import torch.nn.functional as F
 
+def format_number(num):
+    if abs(num) >= 10**12:  # Trillion
+        return "{:.2f}T".format(num / 10**12)
+    elif abs(num) >= 10**9:  # Billion
+        return "{:.2f}B".format(num / 10**9)
+    elif abs(num) >= 10**6:  # Million
+        return "{:.2f}M".format(num / 10**6)
+    else:
+        return str(num)
+
+def show_total_params(model):
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return format_number(params)
+
+def freeze_attn_layer(model):
+    for _, module in model.named_modules():
+        if isinstance(module, ParallelAttention):
+            for param in module.parameters():
+                param.requires_grad = False
+    return model
+
+def freeze_lmhead_layer(model):
+    for _, module in model.named_modules():
+        if isinstance(module, LMHeadPipe):
+            for param in module.parameters():
+                param.requires_grad = False
+    return model
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
@@ -87,6 +115,15 @@ def model_provider(pre_process=True, post_process=True):
                 post_process=post_process
             )
     see_memory_usage(f"After Building Model", force=True)
+
+    print(' > number of params: ', show_total_params(model))
+    if args.freeze_attn:
+        model = freeze_attn_layer(model)
+        print(' > number of params after freeze attn: ', show_total_params(model))
+    if args.freeze_head:
+        model = freeze_lmhead_layer(model)
+        print(' > number of params after freeze lm head: ', show_total_params(model))
+    print(' > number of params after freeze: ', show_total_params(model))
     return model
 
 
